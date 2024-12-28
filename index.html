@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Game - Hand Movement</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to right, #4e54c8, #8f94fb);
+        }
+        #maze {
+            display: grid;
+            grid-template-columns: repeat(10, 50px);
+            gap: 2px;
+            justify-content: center;
+            margin: 20px auto;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .wall {
+            background-color: black;
+        }
+        .path {
+            background-color: white;
+        }
+        .ball {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: black;
+        }
+        .goal {
+            background-color: red;
+        }
+        video, canvas {
+            display: block;
+            margin: 20px auto;
+        }
+        
+        .back {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #1a73e8;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+         
+         
+          .next-level {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #1a73e8;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+ 
+
+    </style>
+</head>
+<body>
+    <h1>Maze Game - Hand Movement</h1>
+    <h3>Use your hand palm </h3>
+    <h4>front of camera</h4>
+    <p>Use your hand movement to control the ball. The ball will move in the direction of the hand.</p>
+    <video id="input-video" autoplay playsinline muted></video>
+    <canvas id="output-canvas"></canvas>
+    <div id="maze"></div>
+    
+
+    <script>
+        // Maze Layout: 0 for path, 1 for wall
+        const mazeLayout = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 1, 0, 1, 1, 1, 0, 1],
+            [1, 0, 1, 0, 0, 0, 0, 1, 0, 1],
+            [1, 0, 1, 0, 1, 1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+            [1, 1, 1, 0, 1, 0, 1, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+            [1, 0, 1, 1, 1, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        ];
+
+        const maze = document.getElementById('maze');
+        const videoElement = document.getElementById('input-video');
+        const canvasElement = document.getElementById('output-canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+
+        let playerPosition = { x: 1, y: 1 }; // Starting position
+        const goalPosition = { x: 8, y: 8 }; // Goal position
+
+        function drawMaze() {
+            maze.innerHTML = '';
+            for (let y = 0; y < mazeLayout.length; y++) {
+                for (let x = 0; x < mazeLayout[y].length; x++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+
+                    if (mazeLayout[y][x] === 1) {
+                        cell.classList.add('wall');
+                    } else {
+                        cell.classList.add('path');
+                    }
+
+                    if (x === playerPosition.x && y === playerPosition.y) {
+                        const ball = document.createElement('div');
+                        ball.classList.add('ball');
+                        cell.appendChild(ball);
+                    }
+
+                    if (x === goalPosition.x && y === goalPosition.y) {
+                        cell.classList.add('goal');
+                    }
+
+                    maze.appendChild(cell);
+                }
+            }
+        }
+
+        function movePlayer(x, y) {
+            // Prevent out of bounds
+            if (x < 0 || y < 0 || x >= mazeLayout[0].length || y >= mazeLayout.length) return;
+
+            // Move player to new position
+            playerPosition = { x, y };
+            drawMaze();
+            checkWin();
+        }
+
+        function checkWin() {
+            if (playerPosition.x === goalPosition.x && playerPosition.y === goalPosition.y) {
+                alert('Congratulations! Do you know?  wasif is fattu ');
+                resetGame();
+            }
+        }
+
+        function resetGame() {
+            playerPosition = { x: 1, y: 1 }; // Reset position
+            drawMaze();
+        }
+
+        // Initialize MediaPipe Hands
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.8,
+            minTrackingConfidence: 0.8,
+        });
+
+        hands.onResults((results) => {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const handLandmarks = results.multiHandLandmarks[0];
+                const handCenterX = (handLandmarks[0].x + handLandmarks[9].x) / 2; // Average x
+                const handCenterY = (handLandmarks[0].y + handLandmarks[9].y) / 2; // Average y
+
+                const normalizedX = Math.round(handCenterX * (mazeLayout[0].length - 1)); // Normalize to grid
+                const normalizedY = Math.round(handCenterY * (mazeLayout.length - 1));
+
+                // Check direction of hand movement and move player
+                if (normalizedX > playerPosition.x) movePlayer(playerPosition.x + 1, playerPosition.y);  // Right
+                if (normalizedX < playerPosition.x) movePlayer(playerPosition.x - 1, playerPosition.y);  // Left
+                if (normalizedY > playerPosition.y) movePlayer(playerPosition.x, playerPosition.y + 1);  // Down
+                if (normalizedY < playerPosition.y) movePlayer(playerPosition.x, playerPosition.y - 1);  // Up
+            }
+
+            canvasCtx.restore();
+        });
+
+        // Initialize camera
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480,
+        });
+        camera.start();
+
+        drawMaze();
+    </script>
+    <div class="btn">
+           <a href="how.html" class="back">back</a>
+          
+          
+            <a href="level1.html" class="next-level">next-level</a>
+    </div>
+</body>
+</html>
