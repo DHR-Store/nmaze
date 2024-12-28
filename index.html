@@ -205,6 +205,50 @@
 
         drawMaze();
     </script>
+
+    <script>
+      function movePlayer(x, y) {
+    // Prevent out of bounds
+    if (x < 0 || y < 0 || x >= mazeLayout[0].length || y >= mazeLayout.length) return;
+
+    // Prevent movement onto walls
+    if (mazeLayout[y][x] === 1) return;
+
+    // Move player to new position
+    playerPosition = { x, y };
+    drawMaze();
+    checkWin();
+}
+
+hands.onResults((results) => {
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const handLandmarks = results.multiHandLandmarks[0];
+        const handCenterX = (handLandmarks[0].x + handLandmarks[9].x) / 2; // Average x
+        const handCenterY = (handLandmarks[0].y + handLandmarks[9].y) / 2; // Average y
+
+        const normalizedX = Math.round(handCenterX * (mazeLayout[0].length - 1)); // Normalize to grid
+        const normalizedY = Math.round(handCenterY * (mazeLayout.length - 1));
+
+        // Check direction of hand movement and move player
+        if (normalizedX > playerPosition.x && mazeLayout[playerPosition.y][playerPosition.x + 1] === 0)
+            movePlayer(playerPosition.x + 1, playerPosition.y); // Right
+        if (normalizedX < playerPosition.x && mazeLayout[playerPosition.y][playerPosition.x - 1] === 0)
+            movePlayer(playerPosition.x - 1, playerPosition.y); // Left
+        if (normalizedY > playerPosition.y && mazeLayout[playerPosition.y + 1][playerPosition.x] === 0)
+            movePlayer(playerPosition.x, playerPosition.y + 1); // Down
+        if (normalizedY < playerPosition.y && mazeLayout[playerPosition.y - 1][playerPosition.x] === 0)
+            movePlayer(playerPosition.x, playerPosition.y - 1); // Up
+    }
+
+    canvasCtx.restore();
+});
+    </script>
+
+    
     <div class="btn">
            <a href="how.html" class="back">back</a>
           
